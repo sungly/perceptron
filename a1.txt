@@ -1,0 +1,23 @@
+Perceptron:
+
+- If output is unsatisfactory, modify each weight by a quantity that is likely
+to imrpove the network. 
+
+- learn relationship between an input and output data
+
+Symbols:
+    Y - actual output
+    (Di - Y) is the error, where D is the desire output vectors: (input, desire output)
+    f() is the output function
+    0 is the threshold 
+
+2 Types:
+
+Simple feedback learning:
+    - uses (y>=d) or (y<d) to change weights 
+    if (y > d):
+        Wji = Wji - CXi
+
+Error Correction learning
+    - uses an error measure to adapt the weight vector 
+
