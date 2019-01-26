@@ -21,3 +21,6 @@ Simple feedback learning:
 Error Correction learning
     - uses an error measure to adapt the weight vector 
 
+
+    https://pythonmachinelearning.pro/perceptrons-the-first-neural-networks/
+
