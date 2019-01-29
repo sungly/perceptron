@@ -1,8 +1,9 @@
 import numpy as np
 import csv
+from random import *
 
 # global constants 
-seed_file = "testSeeds.csv"
+seed_file = "trainSeeds.csv"
 
 '''
 Extract all rows from a given CSV file into an array 
@@ -20,8 +21,10 @@ def extract_csv(file_name):
 
 class Perceptron():
     weights = None
+    threshholds = [0.0, 0.0, 0.0]
+    active_nodes = [False, False, False]
 
-    def __init__(self, threshhold=150, learning_rate=0.1):
+    def __init__(self, learning_rate=1, epoch=50):
         ''' 
         Initializes the weights to zeros.Since the length of each input 
         row also includes the expected result, the weights array length 
@@ -30,8 +33,8 @@ class Perceptron():
         '''
         # self.weights = np.zeros((input_row_len,), dtype=np.float)
         # self.row_length = input_row_len - 1
-        self.threshhold = threshhold
         self.learning_rate = learning_rate
+        self.epoch = epoch
         self.train()
     
     '''
@@ -40,78 +43,120 @@ class Perceptron():
 
     z = summation(0-n) { WiXi}, where w = weight, x = input attribute 
     '''
-    def input_summation(self, input_row):
-        return np.dot(self.weights, input_row)
+    def input_summation(self, attributes, class_type):
+        return np.dot(attributes, self.weights[class_type])
 
     '''
-    Returns the output wheat type:
-    Type A - 1 
-    Type B - 2
-    Type C - 3 
+    Determines whether the node is fired, that is if the activation is 
+    greater than the threshhold value for that class. 
     '''
-    def activation(self, value):
-        print("Summation: ", value)
-        if (value <= 0.3):
+    def activation(self, value, class_type):
+        print("Value: ", value)
+        print("Threshhold: ", self.threshholds[class_type])
+        if value > self.threshholds[class_type]:
             return 1
-        elif (value >= 0.4 and value <= 0.7):
-            return 2
         else:
-            return 3
+            return 0
 
     '''
-    @NOTE: the last value in input_row is the expected output
-
     Adjusts the weight values based on the result of the prediction.
+    Also update the threshold value for each classification.
     '''
-    def feedback_learning(self, input_row, actual_output):
-        expected_output = input_row[-1]
+    def feedback_learning(self, data, actual_output, expected_output, class_type):
+        if actual_output > expected_output:
+            for i in range(len(self.weights[0])):
+                self.weights[class_type][i] = self.weights[class_type][i] - (self.learning_rate * data[i])
+            self.threshholds[class_type] += self.threshholds[class_type] - (self.learning_rate * data[i])
+        else:
+            for i in range(len(self.weights[0])):
+                self.weights[class_type][i] = self.weights[class_type][i] + (self.learning_rate * data[i])
+            self.threshholds[class_type] += self.threshholds[class_type] + (self.learning_rate * data[i])
 
-        # bias value 
-        self.weights[0] += self.learning_rate
-
-        for i in range(1, len(self.weights)):
-            if(actual_output >= expected_output):
-                self.weights[i] = self.weights[i] - (self.learning_rate * input_row[i-1])
-            else:
-                self.weights[i] = self.weights[i] + (self.learning_rate * input_row[i-1])
-        
-        print("Adjusted weights to: ", self.weights)
-
+        print("threshhold updated to: ", self.threshholds)
     '''
     Predict what type a given wheat is based off of its attributes 
     and the current weight values. 
 
     If the perceptron produces the wrong result, apply feedback learning.
     '''
-    def predict(self, input_row):
-        summation = self.input_summation(input_row)
-        wheat_type = self.activation(summation)
+    def predict(self, data, expected_output, class_type):
+        print("Class: ", class_type + 1)
+        summation = self.input_summation(data, class_type)
+        activation_fire = self.activation(summation, class_type)
+        y = 0
+        d = 0
 
-        print("Expected output: ", input_row[-1])
-        print("Actual output: ", wheat_type)
+        print("activation: ", activation_fire)
+        if activation_fire == 1 and expected_output == class_type + 1:
+            # correct prediction 
+            self.active_nodes[class_type] = True
+            #message = "Correct prediction: " + 'Expected: ' + str(expected_output) + ", Actual: " + str(class_type + 1)
+            # print(message)
+        elif activation_fire == 1 and expected_output != class_type + 1:
+            # case of y=1, d=0
+            y = 1
+            d = 0
+            self.feedback_learning(data, y, d, class_type)
+            # message = "Wrong prediction: " + 'Expected: ' + str(expected_output) + ", Actual: " + str(class_type + 1)
+            # print(message)
+            # print("Weight Vector changed to: ", self.weights[class_type])
+            
+        elif activation_fire == 0 and expected_output == class_type + 1:
+            # case of y=0, d=1
+            y = 0
+            d = 1
+            self.feedback_learning(data, y, d, class_type)
+            # message = "Wrong prediction: " + 'Expected: ' + str(expected_output) + ", Actual: " + str(class_type + 1)
+            # print(message)
+            # print("Weight Vector changed to: ", self.weights[class_type])
+        # else:
+            # case of y=0, d=0
+            
 
-        if (wheat_type != input_row[-1]):
-            self.feedback_learning(input_row, wheat_type)
-        else:
-            print("Prediction Correct!")
+        
+
+    '''
+    Initializes the weight vectors for each different class
+    self.weights[0] - class 1 weight vector 
+    self.weights[1] - class 2 weight vector 
+    self.weights[2] - class 3 weight vector 
+    '''
+    def init_weights(self, length):
+        self.weights = [
+            [0] + [randint(0, 1)  for i in range(length-1)],
+            [0] + [randint(0, 1)  for i in range(length-1)],
+            [0] + [randint(0, 1)  for i in range(length-1)]
+        ]
 
     '''
     Trains the model to predict the correct type of wheat. 
-    @NOTE: took out training_inputs for testing
+    @NOTE: x0 is defined to be a constant 1.
+    @TODO: add epoch 
+        - reset self.active_nodes 
     '''
     def train(self):
-        inputs = [18.98,16.57,0.8687,6.449,3.552,2.144,6.453,2]
-        length = len(inputs)
-        self.weights = np.zeros((length,), dtype=np.float)
+        inputs = extract_csv(seed_file)
+        
+        one_row_length = len(inputs[0])
+        self.init_weights(one_row_length)
 
-        self.predict(inputs)
+        print("Training perception...")
 
+        for _ in range(1):
+            inputs = extract_csv(seed_file)
+            for input_row in inputs:
+                data = [1] + input_row[0:one_row_length-1]
+                expected_output = input_row[-1]
+            
+                for i in range(3):
+                    self.predict(input_row, expected_output, i)
 
+                print("Expected OUtout: ", expected_output)
+                print("Final active nodes: ", self.active_nodes)
+                self.active_nodes = [False, False, False]
+                
+                # check which one it belongs to 
+                # reset self.active_nodes here
+        print("Finished training!")
 
-
-# a = extract_csv(seed_file)
 p = Perceptron()
-
-'''
-[18.98,16.57,0.8687,6.449,3.552,2.144,6.453,2]
-'''
